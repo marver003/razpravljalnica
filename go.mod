@@ -1,4 +1,4 @@
-module github.com/marver003/Razpravljalnica
+module github.com/marver003/razpravljalnica
 
 go 1.25.5
 
