@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v6.33.1
-// source: protobuf.proto
+// source: proto/razpravljalnica.proto
 
 package razpravljalnica
 
@@ -404,7 +404,7 @@ var MessageBoard_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "protobuf.proto",
+	Metadata: "proto/razpravljalnica.proto",
 }
 
 const (
@@ -510,5 +510,5 @@ var ControlPlane_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protobuf.proto",
+	Metadata: "proto/razpravljalnica.proto",
 }
