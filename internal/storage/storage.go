@@ -2,13 +2,28 @@ package storage
 
 import (
 	"sync"
-
-	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
+	"time"
 )
 
-// Storage contains all in-memory data structures used by the application.
-// This file only provides the data types and a constructor; it does not
-// implement any business logic (as requested).
+type User struct {
+	Id   int64
+	Name string
+}
+
+type Topic struct {
+	Id   int64
+	Name string
+}
+
+type Message struct {
+	Id        int64
+	TopicId   int64
+	UserId    int64
+	Text      string
+	CreatedAt time.Time
+	Likes     int32
+}
+
 type Storage struct {
 	mu sync.RWMutex
 
@@ -16,21 +31,144 @@ type Storage struct {
 	nextUserID    int64
 	nextTopicID   int64
 	nextMessageID int64
-	nextEventSeq  int64
 
-	// primary data stores
-	Users           map[int64]*pb.User
-	Topics          map[int64]*pb.Topic
-	Messages        map[int64]*pb.Message   // message id -> Message
-	MessagesByTopic map[int64][]*pb.Message // topic id -> ordered slice of Messages
+	// data
+	users    map[int64]*User
+	topics   map[int64]*Topic
+	messages map[int64]*Message
+
+	// topic_id -> ordered messages
+	messagesByTopic map[int64][]*Message
 }
 
-// NewStorage initializes and returns an empty Storage instance.
 func NewStorage() *Storage {
 	return &Storage{
-		Users:           make(map[int64]*pb.User),
-		Topics:          make(map[int64]*pb.Topic),
-		Messages:        make(map[int64]*pb.Message),
-		MessagesByTopic: make(map[int64][]*pb.Message),
+		nextUserID:      1,
+		nextTopicID:     1,
+		nextMessageID:   1,
+		users:           make(map[int64]*User),
+		topics:          make(map[int64]*Topic),
+		messages:        make(map[int64]*Message),
+		messagesByTopic: make(map[int64][]*Message),
 	}
+}
+
+//
+// Users
+//
+
+func (s *Storage) CreateUser(name string) *User {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	user := &User{
+		Id:   s.nextUserID,
+		Name: name,
+	}
+	s.nextUserID++
+
+	s.users[user.Id] = user
+	return user
+}
+
+func (s *Storage) UserExists(userId int64) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	_, ok := s.users[userId]
+	return ok
+}
+
+//
+// Topics
+//
+
+func (s *Storage) CreateTopic(name string) *Topic {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	topic := &Topic{
+		Id:   s.nextTopicID,
+		Name: name,
+	}
+	s.nextTopicID++
+
+	s.topics[topic.Id] = topic
+	return topic
+}
+
+func (s *Storage) ListTopics() []*Topic {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := make([]*Topic, 0, len(s.topics))
+	for _, t := range s.topics {
+		result = append(result, t)
+	}
+	return result
+}
+
+func (s *Storage) TopicExists(topicId int64) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	_, ok := s.topics[topicId]
+	return ok
+}
+
+//
+// Messages
+//
+
+func (s *Storage) PostMessage(topicId, userId int64, text string) *Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	msg := &Message{
+		Id:        s.nextMessageID,
+		TopicId:   topicId,
+		UserId:    userId,
+		Text:      text,
+		CreatedAt: time.Now(),
+		Likes:     0,
+	}
+	s.nextMessageID++
+
+	s.messages[msg.Id] = msg
+	s.messagesByTopic[topicId] = append(s.messagesByTopic[topicId], msg)
+
+	return msg
+}
+
+func (s *Storage) GetMessages(
+	topicId int64,
+	fromMessageId int64,
+	limit int32,
+) []*Message {
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	msgs := s.messagesByTopic[topicId]
+	result := make([]*Message, 0)
+
+	for _, m := range msgs {
+		if m.Id >= fromMessageId {
+			result = append(result, m)
+			if limit > 0 && int32(len(result)) >= limit {
+				break
+			}
+		}
+	}
+
+	return result
+}
+
+func (s *Storage) LikeMessage(messageId int64) *Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	msg := s.messages[messageId]
+	msg.Likes++
+	return msg
 }
