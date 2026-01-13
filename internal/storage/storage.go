@@ -140,11 +140,7 @@ func (s *Storage) PostMessage(topicId, userId int64, text string) *Message {
 	return msg
 }
 
-func (s *Storage) GetMessages(
-	topicId int64,
-	fromMessageId int64,
-	limit int32,
-) []*Message {
+func (s *Storage) GetMessages(topicId int64, fromMessageId int64, limit int32) []*Message {
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -162,6 +158,16 @@ func (s *Storage) GetMessages(
 	}
 
 	return result
+}
+
+func (s *Storage) MessageExists(messageId int64) bool {
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	_, ok := s.messages[messageId]
+
+	return ok
 }
 
 func (s *Storage) LikeMessage(messageId int64) *Message {
