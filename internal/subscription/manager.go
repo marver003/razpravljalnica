@@ -6,52 +6,42 @@ import (
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
 )
 
-// TODO: naročnine, broadcastanje sporočil in lajkov
+type Subscriber struct {
+	UserID   int64
+	TopicIDs map[int64]bool
+	Stream   pb.MessageBoard_SubscribeTopicServer
+}
 
 type Manager struct {
-	mu   sync.RWMutex
-	subs map[int64][]chan *pb.MessageEvent
+	mu          sync.Mutex
+	subscribers map[int64]*Subscriber // userID -> subscriber
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		subs: make(map[int64][]chan *pb.MessageEvent),
+		subscribers: make(map[int64]*Subscriber),
 	}
 }
 
-func (m *Manager) Subscribe(topicID int64) chan *pb.MessageEvent {
-	ch := make(chan *pb.MessageEvent, 16)
-
+func (m *Manager) Add(sub *Subscriber) {
 	m.mu.Lock()
-	m.subs[topicID] = append(m.subs[topicID], ch)
-	m.mu.Unlock()
-
-	return ch
+	defer m.mu.Unlock()
+	m.subscribers[sub.UserID] = sub
 }
 
-func (m *Manager) Unsubscribe(topicID int64, ch chan *pb.MessageEvent) {
+func (m *Manager) Remove(userID int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.subscribers, userID)
+}
+
+func (m *Manager) Broadcast(event *pb.MessageEvent) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	subs := m.subs[topicID]
-	for i, c := range subs {
-		if c == ch {
-			m.subs[topicID] = append(subs[:i], subs[i+1:]...)
-			close(c)
-			break
-		}
-	}
-}
-
-func (m *Manager) Publish(topicID int64, ev *pb.MessageEvent) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for _, ch := range m.subs[topicID] {
-		select {
-		case ch <- ev:
-		default:
-			// drop event for slow subscriber
+	for _, sub := range m.subscribers {
+		if sub.TopicIDs[event.Message.TopicId] {
+			_ = sub.Stream.Send(event)
 		}
 	}
 }

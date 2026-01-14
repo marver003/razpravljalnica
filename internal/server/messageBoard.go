@@ -17,15 +17,19 @@ import (
 // Server implements pb.MessageBoardServer
 type MessageBoardServer struct {
 	pb.UnimplementedMessageBoardServer
-	store *storage.Storage
-	subs  *subscription.Manager
+	store   *storage.Storage
+	subMgr  *subscription.Manager
+	address string
+	nodeId  string
 }
 
 // NewServerMessageBoard returns a pointer of MessageBoardServer struct
-func NewServerMessageBoard(storePtr *storage.Storage, subsPtr *subscription.Manager) *MessageBoardServer {
+func NewServerMessageBoard(storePtr *storage.Storage, subMgrPtr *subscription.Manager, address, nodeId string) *MessageBoardServer {
 	return &MessageBoardServer{
-		store: storePtr,
-		subs:  subsPtr,
+		store:   storePtr,
+		subMgr:  subMgrPtr,
+		address: address,
+		nodeId:  nodeId,
 	}
 }
 
@@ -73,14 +77,25 @@ func (s *MessageBoardServer) PostMessage(ctx context.Context, req *pb.PostMessag
 
 	message := s.store.PostMessage(req.TopicId, req.UserId, req.Text)
 
-	return &pb.Message{
+	pbMessage := &pb.Message{
 		Id:        message.Id,
 		TopicId:   message.TopicId,
 		UserId:    message.UserId,
 		Text:      message.Text,
 		CreatedAt: timestamppb.New(message.CreatedAt),
 		Likes:     message.Likes,
-	}, nil
+	}
+
+	event := &pb.MessageEvent{
+		SequenceNumber: 1,
+		Op:             pb.OpType_OP_POST,
+		Message:        pbMessage,
+		EventAt:        timestamppb.Now(),
+	}
+
+	s.subMgr.Broadcast(event)
+
+	return pbMessage, nil
 }
 
 // LikeMessage likes an existing message and returns message with updated likes
@@ -107,12 +122,6 @@ func (s *MessageBoardServer) LikeMessage(ctx context.Context, req *pb.LikeMessag
 		CreatedAt: timestamppb.New(message.CreatedAt),
 		Likes:     message.Likes,
 	}, nil
-}
-
-// GetSubcscriptionNode (note: generated proto has typo GetSubcscriptionNode)
-// For a single-node deployment we return this node info and a subscribe token
-func (s *MessageBoardServer) GetSubcscriptionNode(ctx context.Context, req *pb.SubscriptionNodeRequest) (*pb.SubscriptionNodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not yet implemented")
 }
 
 // ListTopics returns all topics
@@ -157,9 +166,36 @@ func (s *MessageBoardServer) GetMessages(ctx context.Context, req *pb.GetMessage
 	}, nil
 }
 
+// GetSubcscriptionNode (note: generated proto has typo GetSubcscriptionNode)
+// For a single-node deployment we return this node info and a subscribe token
+func (s *MessageBoardServer) GetSubcscriptionNode(ctx context.Context, req *pb.SubscriptionNodeRequest) (*pb.SubscriptionNodeResponse, error) {
+	return &pb.SubscriptionNodeResponse{
+		SubscribeToken: "token",
+		Node: &pb.NodeInfo{
+			NodeId:  s.nodeId,
+			Address: s.address,
+		},
+	}, nil
+}
+
 // SubscribeTopic: register subscriber, send historical messages from from_message_id, then stream live events
 func (s *MessageBoardServer) SubscribeTopic(req *pb.SubscribeTopicRequest, stream pb.MessageBoard_SubscribeTopicServer) error {
-	return status.Error(codes.Unimplemented, "not yet implemented")
+	topics := make(map[int64]bool)
+	for _, t := range req.TopicId {
+		topics[t] = true
+	}
+
+	sub := &subscription.Subscriber{
+		UserID:   req.UserId,
+		TopicIDs: topics,
+		Stream:   stream,
+	}
+
+	s.subMgr.Add(sub)
+	defer s.subMgr.Remove(req.UserId)
+
+	<-stream.Context().Done()
+	return nil
 }
 
 // helper: simple not found error

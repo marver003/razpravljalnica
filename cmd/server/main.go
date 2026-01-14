@@ -28,9 +28,9 @@ func main() {
 	grpcServer := grpc.NewServer()
 
 	store := storage.NewStorage()
-	subs := subscription.NewManager()
+	subManager := subscription.NewManager()
 
-	srv := server.NewServerMessageBoard(store, subs)
+	srv := server.NewServerMessageBoard(store, subManager, addr, "node")
 
 	pb.RegisterMessageBoardServer(grpcServer, srv)
 
