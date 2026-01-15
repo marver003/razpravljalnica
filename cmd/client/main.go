@@ -7,9 +7,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/emptypb"
+
+	//"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
+	"github.com/marver003/razpravljalnica/cmd/client/ui"
 )
 
 // TODO: CLI client, se poveže s serverjem, demonstracija programa se nahaja tuki
@@ -17,7 +19,7 @@ import (
 func main() {
 	addrPtr := flag.String("u", "localhost", "server address")
 	portPtr := flag.Int("p", 12345, "server port number")
-	subTestPtr := flag.Bool("s", false, "run client subscription test")
+	//subTestPtr := flag.Bool("s", false, "run client subscription test")
 
 	flag.Parse()
 
@@ -31,19 +33,22 @@ func main() {
 	}
 	defer conn.Close()
 
-	context, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	//ctx, cancel := context.WithCancel(context.Background())
+	//defer cancel()
 
 	grpcClient := pb.NewMessageBoardClient(conn)
 
-	if *subTestPtr {
-		clientSubTest(context, grpcClient)
-	} else {
-		clientTest(context, grpcClient)
-	}
+	ui.Start(context.Background(), grpcClient)
+
+	// if *subTestPtr {
+	// 	clientSubTest(ctx, grpcClient)
+	// } else {
+	// 	clientTest(ctx, grpcClient)
+	// }
 
 }
 
+/*
 func clientSubTest(ctx context.Context, grpcClient pb.MessageBoardClient) {
 
 	if _, err := grpcClient.CreateUser(ctx, &pb.CreateUserRequest{Name: "Test User 1"}); err != nil {
@@ -170,3 +175,4 @@ func clientTest(context context.Context, grpcClient pb.MessageBoardClient) {
 
 	fmt.Println("\nAll tests completed successfully.")
 }
+*/
