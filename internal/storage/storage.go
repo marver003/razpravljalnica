@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// TODO: dodat treba apply funkcionalnost
+
 type User struct {
 	Id   int64
 	Name string

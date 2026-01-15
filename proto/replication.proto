@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package replication;
+
+option go_package = "/replication";
+
+import "google/protobuf/empty.proto";
+
+enum OperationType {
+  OP_CREATE_USER = 0;
+  OP_CREATE_TOPIC = 1;
+  OP_POST_MESSAGE = 2;
+  OP_LIKE_MESSAGE = 3;
+}
+
+message Operation {
+  int64 index = 1;        // log index (monotonic)
+  OperationType type = 2;
+  bytes payload = 3;      // serialized request
+}
+
+message AckMessage {
+  int64 index = 1;        // confirmed log index
+}
+
+message GetLogRequest {
+    int64 from_index = 1;
+}
+
+service Replication {
+  // HEAD → next → ... → TAIL
+  rpc Replicate(Operation) returns (AckMessage);
+
+  // TAIL → ... → HEAD
+  rpc Ack(AckMessage) returns (google.protobuf.Empty);
+
+  // sync for new/rejoined nodes
+  rpc GetLogFrom(GetLogRequest) returns (stream Operation);
+}

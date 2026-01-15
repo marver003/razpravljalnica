@@ -6,6 +6,8 @@ import (
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
 )
 
+// TODO: dodat treba balancer
+
 type Subscriber struct {
 	UserID   int64
 	TopicIDs map[int64]bool
