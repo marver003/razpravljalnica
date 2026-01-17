@@ -64,7 +64,7 @@ func showTopicsScreen(ctx context.Context, app *tview.Application, client pb.Mes
 
 	// Helper to refresh the list
 	updateList := func() {
-		topicIDs := loadTopics(ctx, client, list)
+		topicIDs := loadTopics(ctx, app, client, list, state)
 		list.AddItem("", "", 0, nil)
 		list.AddItem("+ Create new topic", "Press Enter to create", 'n', func() {
 			showCreateTopicDialog(ctx, app, client, state)

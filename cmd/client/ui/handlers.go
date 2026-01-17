@@ -16,10 +16,13 @@ type MessageWithUser struct {
 	User    string
 }
 
-func loadTopics(ctx context.Context, client pb.MessageBoardClient, list *tview.List) []int64 {
+func loadTopics(ctx context.Context, app *tview.Application, client pb.MessageBoardClient, list *tview.List, state *AppState) []int64 {
 	resp, err := client.ListTopics(ctx, &emptypb.Empty{})
 	if err != nil {
-		panic(err)
+		showErrorDialog(app, "Error while trying to load topics. Try again. ", func() {
+			showTopicsScreen(ctx, app, client, state)
+		})
+		return nil
 	}
 
 	list.Clear()
@@ -33,6 +36,16 @@ func loadTopics(ctx context.Context, client pb.MessageBoardClient, list *tview.L
 	return ids
 }
 
+func showErrorDialog(app *tview.Application, message string, onDismiss func()) {
+	modal := tview.NewModal().
+		SetText(message).
+		AddButtons([]string{"V redu"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			onDismiss()
+		})
+	app.SetRoot(modal, true).SetFocus(modal)
+}
+
 func showCreateTopicDialog(ctx context.Context, app *tview.Application, client pb.MessageBoardClient, state *AppState) {
 	form := tview.NewForm()
 	form.AddInputField("Topic name", "", 30, nil, nil).
@@ -44,7 +57,10 @@ func showCreateTopicDialog(ctx context.Context, app *tview.Application, client p
 
 			_, err := client.CreateTopic(ctx, &pb.CreateTopicRequest{Name: name})
 			if err != nil {
-				panic(err)
+				showErrorDialog(app, "Napaka pri ustvarjanju topica: "+err.Error(), func() {
+					showTopicsScreen(ctx, app, client, state)
+				})
+				return
 			}
 
 			showTopicsScreen(ctx, app, client, state)

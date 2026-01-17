@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"log"
 	"sync"
 
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
@@ -43,7 +44,13 @@ func (m *Manager) Broadcast(event *pb.MessageEvent) {
 
 	for _, sub := range m.subscribers {
 		if sub.TopicIDs[event.Message.TopicId] {
-			_ = sub.Stream.Send(event)
+			err := sub.Stream.Send(event)
+			if err != nil {
+				log.Printf("Failed to send to subscriber: %v", err)
+				// Optionally remove the dead subscriber here
+			} else {
+				log.Printf("Successfully broadcasted message %d to a sub", event.Message.Id)
+			}
 		}
 	}
 }
