@@ -4,8 +4,6 @@ import (
 	"log"
 	"sync"
 
-	//"time"
-
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
 	repl "github.com/marver003/razpravljalnica/api/replication"
 	"google.golang.org/protobuf/proto"
@@ -14,11 +12,10 @@ import (
 type Storage struct {
 	mu sync.RWMutex
 
-	// Log operacij za recovery in sinhronizacijo
+	// opertaions log for recovery and sync
 	operations []*repl.Operation
 	lastIndex  int64
 
-	// Dejanski podatki (uporabljamo PB tipe za konsistentnost)
 	users           map[int64]*pb.User
 	topics          map[int64]*pb.Topic
 	messages        map[int64]*pb.Message
@@ -39,16 +36,16 @@ func (s *Storage) Apply(op *repl.Operation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 1. Idempotentnost: Preveri, če smo to operacijo že izvedli
+	// check if the operation was already done
 	if op.Index <= s.lastIndex && len(s.operations) > 0 {
 		return
 	}
 
-	// 2. Dodaj v log
+	// add to log
 	s.operations = append(s.operations, op)
 	s.lastIndex = op.Index
 
-	// 3. Izvrši spremembo (Pretvori bytes nazaj v objekte)
+	// execute change (convert bytes back to storage data)
 	switch op.Type {
 	case repl.OperationType_OP_CREATE_USER:
 		log.Printf("STORAGE: Creating user at index %d", op.Index)
@@ -69,7 +66,7 @@ func (s *Storage) Apply(op *repl.Operation) {
 		var req pb.PostMessageRequest
 		if proto.Unmarshal(op.Payload, &req) == nil {
 			msg := &pb.Message{
-				Id:      op.Index, // Index operacije je unikaten ID sporočila!
+				Id:      op.Index, // inxed operation is unique message id
 				TopicId: req.TopicId,
 				UserId:  req.UserId,
 				Text:    req.Text,
@@ -104,7 +101,21 @@ func (s *Storage) GetOperationsFrom(index int64) []*repl.Operation {
 	return result
 }
 
-// GetMessage vrne posamezno sporočilo po ID-ju v formatu, ki ga pričakuje gRPC
+func (s *Storage) GetRecentOperations(limit int) []*repl.Operation {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.operations) == 0 {
+		return nil
+	}
+
+	start := len(s.operations) - limit
+	if start < 0 {
+		start = 0
+	}
+	return s.operations[start:]
+}
+
 func (s *Storage) GetMessage(id int64) *pb.Message {
 	log.Printf("STORAGE: Get Message id %d", id)
 	s.mu.RLock()
@@ -118,25 +129,6 @@ func (s *Storage) GetMessage(id int64) *pb.Message {
 	return msg
 }
 
-/*
-//
-// Users
-//
-
-	func (s *Storage) CreateUser(name string) *pb.User {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		user := &pb.User{
-			Id:   s.nextUserID,
-			Name: name,
-		}
-		s.nextUserID++
-
-		s.users[user.Id] = user
-		return user
-	}
-*/
 func (s *Storage) UserExists(userId int64) bool {
 	log.Printf("STORAGE: UserExists userId %d", userId)
 	s.mu.RLock()
@@ -146,25 +138,6 @@ func (s *Storage) UserExists(userId int64) bool {
 	return ok
 }
 
-/*
-//
-// Topics
-//
-
-	func (s *Storage) CreateTopic(name string) *pb.Topic {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		topic := &pb.Topic{
-			Id:   s.nextTopicID,
-			Name: name,
-		}
-		s.nextTopicID++
-
-		s.topics[topic.Id] = topic
-		return topic
-	}
-*/
 func (s *Storage) ListTopics() []*pb.Topic {
 	log.Printf("STORAGE: ListTopics")
 	s.mu.RLock()
@@ -186,31 +159,6 @@ func (s *Storage) TopicExists(topicId int64) bool {
 	return ok
 }
 
-/*
-//
-// Messages
-//
-
-	func (s *Storage) PostMessage(topicId, userId int64, text string) *pb.Message {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		msg := &pb.Message{
-			Id:        s.nextMessageID,
-			TopicId:   topicId,
-			UserId:    userId,
-			Text:      text,
-			CreatedAt: time.Now(),
-			Likes:     0,
-		}
-		s.nextMessageID++
-
-		s.messages[msg.Id] = msg
-		s.messagesByTopic[topicId] = append(s.messagesByTopic[topicId], msg)
-
-		return msg
-	}
-*/
 func (s *Storage) GetMessages(topicId int64, fromMessageId int64, limit int32) []*pb.Message {
 	log.Printf("STORAGE: GetMessages topicId %d; fromMessageId %d; limit %d", topicId, fromMessageId, limit)
 	s.mu.RLock()
@@ -232,7 +180,7 @@ func (s *Storage) GetMessages(topicId int64, fromMessageId int64, limit int32) [
 }
 
 func (s *Storage) MessageExists(messageId int64) bool {
-	log.Printf("STORAGE: MessageExists messageId", messageId)
+	log.Printf("STORAGE: MessageExists messageId %d", messageId)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -241,17 +189,6 @@ func (s *Storage) MessageExists(messageId int64) bool {
 	return ok
 }
 
-/*
-func (s *Storage) LikeMessage(messageId int64) *pb.Message {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	msg := s.messages[messageId]
-	msg.Likes++
-	return msg
-}
-*/
-
 func (s *Storage) GetUser(id int64) *pb.User {
 	log.Printf("STORAGE: GetUser id %d", id)
 	s.mu.RLock()
@@ -259,9 +196,27 @@ func (s *Storage) GetUser(id int64) *pb.User {
 	return s.users[id]
 }
 
+func (s *Storage) GetUserByName(name string) *pb.User {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, u := range s.users {
+		if u.Name == name {
+			return u
+		}
+	}
+	return nil
+}
+
 func (s *Storage) GetTopic(id int64) *pb.Topic {
 	log.Printf("STORAGE: GetTopic id %d", id)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.topics[id]
+}
+
+func (s *Storage) GetLastIndex() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.lastIndex
 }

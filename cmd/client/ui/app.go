@@ -62,14 +62,14 @@ func showTopicsScreen(ctx context.Context, app *tview.Application, client pb.Mes
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetTitle("Topics").SetBorder(true).SetTitleAlign(tview.AlignCenter)
 
-	// Helper to refresh the list
+	// helper to refresh the list
 	updateList := func() {
 		topicIDs := loadTopics(ctx, app, client, list, state)
 		list.AddItem("", "", 0, nil)
 		list.AddItem("+ Create new topic", "Press Enter to create", 'n', func() {
 			showCreateTopicDialog(ctx, app, client, state)
 		})
-		// You might want to store topicIDs in a way that the SelectedFunc can access the latest version
+		
 		list.SetSelectedFunc(func(index int, _ string, _ string, _ rune) {
 			if index >= len(topicIDs) {
 				return

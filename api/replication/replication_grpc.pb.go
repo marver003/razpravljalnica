@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -21,7 +20,6 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Replication_Replicate_FullMethodName  = "/replication.Replication/Replicate"
-	Replication_Ack_FullMethodName        = "/replication.Replication/Ack"
 	Replication_GetLogFrom_FullMethodName = "/replication.Replication/GetLogFrom"
 )
 
@@ -31,8 +29,6 @@ const (
 type ReplicationClient interface {
 	// HEAD → next → ... → TAIL
 	Replicate(ctx context.Context, in *Operation, opts ...grpc.CallOption) (*AckMessage, error)
-	// TAIL → ... → HEAD
-	Ack(ctx context.Context, in *AckMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// sync for new/rejoined nodes
 	GetLogFrom(ctx context.Context, in *GetLogRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Operation], error)
 }
@@ -49,16 +45,6 @@ func (c *replicationClient) Replicate(ctx context.Context, in *Operation, opts .
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AckMessage)
 	err := c.cc.Invoke(ctx, Replication_Replicate_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *replicationClient) Ack(ctx context.Context, in *AckMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Replication_Ack_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +76,6 @@ type Replication_GetLogFromClient = grpc.ServerStreamingClient[Operation]
 type ReplicationServer interface {
 	// HEAD → next → ... → TAIL
 	Replicate(context.Context, *Operation) (*AckMessage, error)
-	// TAIL → ... → HEAD
-	Ack(context.Context, *AckMessage) (*emptypb.Empty, error)
 	// sync for new/rejoined nodes
 	GetLogFrom(*GetLogRequest, grpc.ServerStreamingServer[Operation]) error
 	mustEmbedUnimplementedReplicationServer()
@@ -106,9 +90,6 @@ type UnimplementedReplicationServer struct{}
 
 func (UnimplementedReplicationServer) Replicate(context.Context, *Operation) (*AckMessage, error) {
 	return nil, status.Error(codes.Unimplemented, "method Replicate not implemented")
-}
-func (UnimplementedReplicationServer) Ack(context.Context, *AckMessage) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method Ack not implemented")
 }
 func (UnimplementedReplicationServer) GetLogFrom(*GetLogRequest, grpc.ServerStreamingServer[Operation]) error {
 	return status.Error(codes.Unimplemented, "method GetLogFrom not implemented")
@@ -152,24 +133,6 @@ func _Replication_Replicate_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Replication_Ack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AckMessage)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ReplicationServer).Ack(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Replication_Ack_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ReplicationServer).Ack(ctx, req.(*AckMessage))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Replication_GetLogFrom_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(GetLogRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -191,10 +154,6 @@ var Replication_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Replicate",
 			Handler:    _Replication_Replicate_Handler,
-		},
-		{
-			MethodName: "Ack",
-			Handler:    _Replication_Ack_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

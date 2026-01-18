@@ -15,16 +15,11 @@ message RegisterRequest {
   NodeInfo node = 1;
 }
 
-message Heartbeat {
-  string node_id = 1;
-}
-
 message ChainState {
   repeated NodeInfo chain = 1;
 }
 
 service ControlPlane {
   rpc RegisterNode(RegisterRequest) returns (ChainState);
-  rpc SendHeartbeat(Heartbeat) returns (google.protobuf.Empty);
   rpc GetChainState(google.protobuf.Empty) returns (ChainState);
 }

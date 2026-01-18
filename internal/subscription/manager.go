@@ -38,6 +38,12 @@ func (m *Manager) Remove(userID int64) {
 	delete(m.subscribers, userID)
 }
 
+func (m *Manager) Count() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.subscribers)
+}
+
 func (m *Manager) Broadcast(event *pb.MessageEvent) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -47,7 +53,6 @@ func (m *Manager) Broadcast(event *pb.MessageEvent) {
 			err := sub.Stream.Send(event)
 			if err != nil {
 				log.Printf("Failed to send to subscriber: %v", err)
-				// Optionally remove the dead subscriber here
 			} else {
 				log.Printf("Successfully broadcasted message %d to a sub", event.Message.Id)
 			}

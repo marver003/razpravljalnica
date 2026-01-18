@@ -9,7 +9,6 @@ package replication
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -235,7 +234,7 @@ var File_proto_replication_proto protoreflect.FileDescriptor
 
 const file_proto_replication_proto_rawDesc = "" +
 	"\n" +
-	"\x17proto/replication.proto\x12\vreplication\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa5\x01\n" +
+	"\x17proto/replication.proto\x12\vreplication\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa5\x01\n" +
 	"\tOperation\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\x03R\x05index\x12.\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1a.replication.OperationTypeR\x04type\x12\x18\n" +
@@ -251,10 +250,9 @@ const file_proto_replication_proto_rawDesc = "" +
 	"\x0eOP_CREATE_USER\x10\x00\x12\x13\n" +
 	"\x0fOP_CREATE_TOPIC\x10\x01\x12\x13\n" +
 	"\x0fOP_POST_MESSAGE\x10\x02\x12\x13\n" +
-	"\x0fOP_LIKE_MESSAGE\x10\x032\xc7\x01\n" +
+	"\x0fOP_LIKE_MESSAGE\x10\x032\x8f\x01\n" +
 	"\vReplication\x12<\n" +
-	"\tReplicate\x12\x16.replication.Operation\x1a\x17.replication.AckMessage\x126\n" +
-	"\x03Ack\x12\x17.replication.AckMessage\x1a\x16.google.protobuf.Empty\x12B\n" +
+	"\tReplicate\x12\x16.replication.Operation\x1a\x17.replication.AckMessage\x12B\n" +
 	"\n" +
 	"GetLogFrom\x12\x1a.replication.GetLogRequest\x1a\x16.replication.Operation0\x01B\x0eZ\f/replicationb\x06proto3"
 
@@ -278,19 +276,16 @@ var file_proto_replication_proto_goTypes = []any{
 	(*AckMessage)(nil),            // 2: replication.AckMessage
 	(*GetLogRequest)(nil),         // 3: replication.GetLogRequest
 	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 5: google.protobuf.Empty
 }
 var file_proto_replication_proto_depIdxs = []int32{
 	0, // 0: replication.Operation.type:type_name -> replication.OperationType
 	4, // 1: replication.Operation.timestamp:type_name -> google.protobuf.Timestamp
 	1, // 2: replication.Replication.Replicate:input_type -> replication.Operation
-	2, // 3: replication.Replication.Ack:input_type -> replication.AckMessage
-	3, // 4: replication.Replication.GetLogFrom:input_type -> replication.GetLogRequest
-	2, // 5: replication.Replication.Replicate:output_type -> replication.AckMessage
-	5, // 6: replication.Replication.Ack:output_type -> google.protobuf.Empty
-	1, // 7: replication.Replication.GetLogFrom:output_type -> replication.Operation
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
+	3, // 3: replication.Replication.GetLogFrom:input_type -> replication.GetLogRequest
+	2, // 4: replication.Replication.Replicate:output_type -> replication.AckMessage
+	1, // 5: replication.Replication.GetLogFrom:output_type -> replication.Operation
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name

@@ -21,7 +21,6 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	ControlPlane_RegisterNode_FullMethodName  = "/controlplane.ControlPlane/RegisterNode"
-	ControlPlane_SendHeartbeat_FullMethodName = "/controlplane.ControlPlane/SendHeartbeat"
 	ControlPlane_GetChainState_FullMethodName = "/controlplane.ControlPlane/GetChainState"
 )
 
@@ -30,7 +29,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ControlPlaneClient interface {
 	RegisterNode(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*ChainState, error)
-	SendHeartbeat(ctx context.Context, in *Heartbeat, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetChainState(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ChainState, error)
 }
 
@@ -52,16 +50,6 @@ func (c *controlPlaneClient) RegisterNode(ctx context.Context, in *RegisterReque
 	return out, nil
 }
 
-func (c *controlPlaneClient) SendHeartbeat(ctx context.Context, in *Heartbeat, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ControlPlane_SendHeartbeat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *controlPlaneClient) GetChainState(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ChainState, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ChainState)
@@ -77,7 +65,6 @@ func (c *controlPlaneClient) GetChainState(ctx context.Context, in *emptypb.Empt
 // for forward compatibility.
 type ControlPlaneServer interface {
 	RegisterNode(context.Context, *RegisterRequest) (*ChainState, error)
-	SendHeartbeat(context.Context, *Heartbeat) (*emptypb.Empty, error)
 	GetChainState(context.Context, *emptypb.Empty) (*ChainState, error)
 	mustEmbedUnimplementedControlPlaneServer()
 }
@@ -91,9 +78,6 @@ type UnimplementedControlPlaneServer struct{}
 
 func (UnimplementedControlPlaneServer) RegisterNode(context.Context, *RegisterRequest) (*ChainState, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterNode not implemented")
-}
-func (UnimplementedControlPlaneServer) SendHeartbeat(context.Context, *Heartbeat) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method SendHeartbeat not implemented")
 }
 func (UnimplementedControlPlaneServer) GetChainState(context.Context, *emptypb.Empty) (*ChainState, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChainState not implemented")
@@ -137,24 +121,6 @@ func _ControlPlane_RegisterNode_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ControlPlane_SendHeartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Heartbeat)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ControlPlaneServer).SendHeartbeat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ControlPlane_SendHeartbeat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ControlPlaneServer).SendHeartbeat(ctx, req.(*Heartbeat))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ControlPlane_GetChainState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -183,10 +149,6 @@ var ControlPlane_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterNode",
 			Handler:    _ControlPlane_RegisterNode_Handler,
-		},
-		{
-			MethodName: "SendHeartbeat",
-			Handler:    _ControlPlane_SendHeartbeat_Handler,
 		},
 		{
 			MethodName: "GetChainState",

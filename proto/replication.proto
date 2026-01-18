@@ -4,7 +4,6 @@ package replication;
 
 option go_package = "/replication";
 
-import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 enum OperationType {
@@ -32,9 +31,6 @@ message GetLogRequest {
 service Replication {
   // HEAD → next → ... → TAIL
   rpc Replicate(Operation) returns (AckMessage);
-
-  // TAIL → ... → HEAD
-  rpc Ack(AckMessage) returns (google.protobuf.Empty);
 
   // sync for new/rejoined nodes
   rpc GetLogFrom(GetLogRequest) returns (stream Operation);

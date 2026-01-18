@@ -22,10 +22,45 @@ type ControlPlane struct {
 	cp.UnimplementedControlPlaneServer
 	mu sync.RWMutex
 
-	// Seznam vseh aktivnih vozlišč v verigi
-	nodes    map[string]*NodeStatus
-	chain    []*cp.NodeInfo
-	lastSeen map[string]time.Time // NodeID -> Timestamp
+	nodes    map[string]*NodeStatus // list of all nodes that are/were in chain
+	chain    []*cp.NodeInfo         // list of all active nodes in chain
+	lastSeen map[string]time.Time   // NodeID -> Timestamp
+
+	logFunc func(string, ...any)
+}
+
+func (s *ControlPlane) SetLogger(fn func(string, ...any)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.logFunc = fn
+}
+
+func (s *ControlPlane) log(format string, v ...any) {
+	if s.logFunc != nil {
+		s.logFunc(format, v...)
+	} else {
+		log.Printf(format, v...)
+	}
+}
+
+// GetState returns a snapshot of the current state for UI
+func (s *ControlPlane) GetState() ([]*cp.NodeInfo, map[string]*NodeStatus) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// deep copy to avoid race conditions in UI
+	chainCopy := make([]*cp.NodeInfo, len(s.chain))
+	copy(chainCopy, s.chain)
+
+	nodesCopy := make(map[string]*NodeStatus)
+	for k, v := range s.nodes {
+		nodesCopy[k] = &NodeStatus{
+			Info:     v.Info,
+			LastSeen: v.LastSeen,
+		}
+	}
+
+	return chainCopy, nodesCopy
 }
 
 func (s *ControlPlane) GetClusterState(ctx context.Context, _ *emptypb.Empty) (*pb.GetClusterStateResponse, error) {
@@ -58,8 +93,6 @@ func NewControlPlane() *ControlPlane {
 		lastSeen: make(map[string]time.Time),
 	}
 
-	// Opcijsko: Zaženi gorutino, ki preverja izpadle node (za oceno 9-10)
-	// go cpServer.monitorNodes()
 	go cpServer.startMonitoring()
 	return cpServer
 }
@@ -75,25 +108,26 @@ func (s *ControlPlane) startMonitoring() {
 		for _, node := range s.chain {
 			lastHeartbeat := s.lastSeen[node.NodeId]
 
-			// Če je vozlišče tiho več kot 5 sekund, ga odstranimo
+			// if the node's heartbeat is older than 5 seconds, it's removed
 			if time.Since(lastHeartbeat) < 5*time.Second {
 				newChain = append(newChain, node)
 			} else {
-				log.Printf("Vozlišče %s je poteklo (zadnjič videno pred %v) - odstranjujem iz verige",
+				s.log("Vozlišče %s je poteklo (zadnjič videno pred %v) - odstranjujem iz verige",
 					node.NodeId, time.Since(lastHeartbeat).Round(time.Second))
 				changed = true
-				// OPOMBA: Vozlišča NE brišemo iz s.nodes, da ohranimo zgodovino za s.RegisterNode!
+				// NOTE: Node isn't deleted from s.nodes, to preserve history for s.RegisterNode
 			}
 		}
 
 		if changed {
 			s.chain = newChain
-			log.Printf("Veriga posodobljena. Nova dolžina: %d", len(s.chain))
+			s.log("Veriga posodobljena. Nova dolžina: %d", len(s.chain))
 		}
 		s.mu.Unlock()
 	}
 }
 
+// RegisterNode is called by new nodes, but it is also used as a heartbeat called every 2 seconds
 func (s *ControlPlane) RegisterNode(ctx context.Context, req *cp.RegisterRequest) (*cp.ChainState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -101,11 +135,10 @@ func (s *ControlPlane) RegisterNode(ctx context.Context, req *cp.RegisterRequest
 	nodeID := req.Node.NodeId
 	s.lastSeen[nodeID] = time.Now()
 
-	// 1. Preverimo, če vozlišče že obstaja v našem zgodovinskem seznamu (s.nodes)
+	// check if current node already exists in node history s.nodes
 	_, existedBefore := s.nodes[nodeID]
-
 	if !existedBefore {
-		log.Printf("Registracija NOVEGA vozlišča: %s (%s)", nodeID, req.Node.Address)
+		s.log("Registering NEW node: %s (%s)", nodeID, req.Node.Address)
 		s.nodes[nodeID] = &NodeStatus{
 			Info:     req.Node,
 			LastSeen: time.Now(),
@@ -115,7 +148,7 @@ func (s *ControlPlane) RegisterNode(ctx context.Context, req *cp.RegisterRequest
 		s.nodes[nodeID].Info = req.Node
 	}
 
-	// 2. Preverimo, če je trenutno v AKTIVNI verigi
+	// check if the node is in active chain
 	inChain := false
 	for _, n := range s.chain {
 		if n.NodeId == nodeID {
@@ -124,12 +157,12 @@ func (s *ControlPlane) RegisterNode(ctx context.Context, req *cp.RegisterRequest
 		}
 	}
 
-	// 3. Dodajanje v verigo z natančnim logiranjem
+	// replace active chain with new chain
 	if !inChain {
 		if existedBefore {
-			log.Printf("Vozlišče %s se je VRNILO v verigo po padcu/timeoutu", nodeID)
+			s.log("Node %s RETURNED into chain", nodeID)
 		} else {
-			log.Printf("Vozlišče %s je bilo dodano na konec verige", nodeID)
+			s.log("Node %s ADDED to the tail", nodeID)
 		}
 		s.chain = append(s.chain, req.Node)
 	}
@@ -137,32 +170,9 @@ func (s *ControlPlane) RegisterNode(ctx context.Context, req *cp.RegisterRequest
 	return &cp.ChainState{Chain: s.chain}, nil
 }
 
-// SendHeartbeat vozlišče pokliče vsakih nekaj sekund
-func (s *ControlPlane) SendHeartbeat(ctx context.Context, req *cp.Heartbeat) (*emptypb.Empty, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if status, exists := s.nodes[req.NodeId]; exists {
-		status.LastSeen = time.Now()
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// GetChainState vrne trenutni vrstni red verige
+// GetChainState returns current chain state
 func (s *ControlPlane) GetChainState(ctx context.Context, _ *emptypb.Empty) (*cp.ChainState, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return &cp.ChainState{Chain: s.chain}, nil
-}
-
-// monitorNodes (Osnova za oceno 9-10)
-func (s *ControlPlane) monitorNodes() {
-	for {
-		time.Sleep(2 * time.Second)
-		s.mu.Lock()
-		// Tukaj bi preveril, če je time.Since(status.LastSeen) > 5 * time.Second
-		// In če je, bi odstranil node iz s.chain in rekonfiguriral sosede.
-		s.mu.Unlock()
-	}
 }

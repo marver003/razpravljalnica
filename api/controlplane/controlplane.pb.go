@@ -118,50 +118,6 @@ func (x *RegisterRequest) GetNode() *NodeInfo {
 	return nil
 }
 
-type Heartbeat struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Heartbeat) Reset() {
-	*x = Heartbeat{}
-	mi := &file_proto_controlplane_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Heartbeat) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Heartbeat) ProtoMessage() {}
-
-func (x *Heartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_controlplane_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Heartbeat.ProtoReflect.Descriptor instead.
-func (*Heartbeat) Descriptor() ([]byte, []int) {
-	return file_proto_controlplane_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *Heartbeat) GetNodeId() string {
-	if x != nil {
-		return x.NodeId
-	}
-	return ""
-}
-
 type ChainState struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Chain         []*NodeInfo            `protobuf:"bytes,1,rep,name=chain,proto3" json:"chain,omitempty"`
@@ -171,7 +127,7 @@ type ChainState struct {
 
 func (x *ChainState) Reset() {
 	*x = ChainState{}
-	mi := &file_proto_controlplane_proto_msgTypes[3]
+	mi := &file_proto_controlplane_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +139,7 @@ func (x *ChainState) String() string {
 func (*ChainState) ProtoMessage() {}
 
 func (x *ChainState) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_controlplane_proto_msgTypes[3]
+	mi := &file_proto_controlplane_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -196,7 +152,7 @@ func (x *ChainState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChainState.ProtoReflect.Descriptor instead.
 func (*ChainState) Descriptor() ([]byte, []int) {
-	return file_proto_controlplane_proto_rawDescGZIP(), []int{3}
+	return file_proto_controlplane_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ChainState) GetChain() []*NodeInfo {
@@ -215,15 +171,12 @@ const file_proto_controlplane_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\"=\n" +
 	"\x0fRegisterRequest\x12*\n" +
-	"\x04node\x18\x01 \x01(\v2\x16.controlplane.NodeInfoR\x04node\"$\n" +
-	"\tHeartbeat\x12\x17\n" +
-	"\anode_id\x18\x01 \x01(\tR\x06nodeId\":\n" +
+	"\x04node\x18\x01 \x01(\v2\x16.controlplane.NodeInfoR\x04node\":\n" +
 	"\n" +
 	"ChainState\x12,\n" +
-	"\x05chain\x18\x01 \x03(\v2\x16.controlplane.NodeInfoR\x05chain2\xdc\x01\n" +
+	"\x05chain\x18\x01 \x03(\v2\x16.controlplane.NodeInfoR\x05chain2\x9a\x01\n" +
 	"\fControlPlane\x12G\n" +
-	"\fRegisterNode\x12\x1d.controlplane.RegisterRequest\x1a\x18.controlplane.ChainState\x12@\n" +
-	"\rSendHeartbeat\x12\x17.controlplane.Heartbeat\x1a\x16.google.protobuf.Empty\x12A\n" +
+	"\fRegisterNode\x12\x1d.controlplane.RegisterRequest\x1a\x18.controlplane.ChainState\x12A\n" +
 	"\rGetChainState\x12\x16.google.protobuf.Empty\x1a\x18.controlplane.ChainStateB\x0fZ\r/controlplaneb\x06proto3"
 
 var (
@@ -238,25 +191,22 @@ func file_proto_controlplane_proto_rawDescGZIP() []byte {
 	return file_proto_controlplane_proto_rawDescData
 }
 
-var file_proto_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proto_controlplane_proto_goTypes = []any{
 	(*NodeInfo)(nil),        // 0: controlplane.NodeInfo
 	(*RegisterRequest)(nil), // 1: controlplane.RegisterRequest
-	(*Heartbeat)(nil),       // 2: controlplane.Heartbeat
-	(*ChainState)(nil),      // 3: controlplane.ChainState
-	(*emptypb.Empty)(nil),   // 4: google.protobuf.Empty
+	(*ChainState)(nil),      // 2: controlplane.ChainState
+	(*emptypb.Empty)(nil),   // 3: google.protobuf.Empty
 }
 var file_proto_controlplane_proto_depIdxs = []int32{
 	0, // 0: controlplane.RegisterRequest.node:type_name -> controlplane.NodeInfo
 	0, // 1: controlplane.ChainState.chain:type_name -> controlplane.NodeInfo
 	1, // 2: controlplane.ControlPlane.RegisterNode:input_type -> controlplane.RegisterRequest
-	2, // 3: controlplane.ControlPlane.SendHeartbeat:input_type -> controlplane.Heartbeat
-	4, // 4: controlplane.ControlPlane.GetChainState:input_type -> google.protobuf.Empty
-	3, // 5: controlplane.ControlPlane.RegisterNode:output_type -> controlplane.ChainState
-	4, // 6: controlplane.ControlPlane.SendHeartbeat:output_type -> google.protobuf.Empty
-	3, // 7: controlplane.ControlPlane.GetChainState:output_type -> controlplane.ChainState
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
+	3, // 3: controlplane.ControlPlane.GetChainState:input_type -> google.protobuf.Empty
+	2, // 4: controlplane.ControlPlane.RegisterNode:output_type -> controlplane.ChainState
+	2, // 5: controlplane.ControlPlane.GetChainState:output_type -> controlplane.ChainState
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -273,7 +223,7 @@ func file_proto_controlplane_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_controlplane_proto_rawDesc), len(file_proto_controlplane_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
