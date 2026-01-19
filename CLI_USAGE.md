@@ -137,7 +137,7 @@ The test runner wraps `go test` and supports grouped execution, verbose output, 
 ## Test Runner Usage
 
 ```bash
-test <command>
+./test <command>
 ```
 
 ### Available Commands
@@ -158,31 +158,31 @@ test <command>
 ### Run all tests
 
 ```bash
-test all
+./test all
 ```
 
 ### Run only API tests
 
 ```bash
-test api
+./test api
 ```
 
 ### Run only internal tests
 
 ```bash
-test internal
+./test internal
 ```
 
 ### Run all tests with verbose output
 
 ```bash
-test verbose
+./test verbose
 ```
 
 ### Run tests with coverage
 
 ```bash
-test coverage
+./test coverage
 ```
 
 This command runs `go test -cover` for each package and prints the **statement coverage percentage**, indicating how much of the code was executed during testing.
