@@ -2,24 +2,35 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 
 	cp "github.com/marver003/razpravljalnica/api/controlplane"
 	pb "github.com/marver003/razpravljalnica/api/razpravljalnica"
 
 	"github.com/marver003/razpravljalnica/cmd/client/ui"
+	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func main() {
-	cpAddr := flag.String("cp", "localhost:12345", "Control Plane address")
-	flag.Parse()
+var cpAddr string
 
+var rootCmd = &cobra.Command{
+	Use:   "client",
+	Short: "Razpravljalnica Message Board Client",
+	Long: `A client application for the Razpravljalnica distributed message board system.
+Connects to the control plane to discover nodes and interact with the message board.`,
+	Run: runClient,
+}
+
+func init() {
+	rootCmd.Flags().StringVarP(&cpAddr, "controlplane", "c", "localhost:12345", "Control Plane address (host:port)")
+}
+
+func runClient(cmd *cobra.Command, args []string) {
 	// connect to control plane
-	conn, err := grpc.NewClient(*cpAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(cpAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("CP connection failed: %v", err)
 	}
@@ -48,4 +59,10 @@ func main() {
 
 	// start UI
 	ui.Start(context.Background(), smartClient)
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
 }
